@@ -333,7 +333,9 @@ internal sealed class GameForm : Form
             new Rectangle(area.X, 145, area.Width, 65));
         int h = (int)(area.Height * 0.57);
         int w = (int)(h * 0.48);
-        // El personaje conserva siempre la misma coordenada horizontal; solo sube y baja en su propio sitio.\n        float jumpLift = jump > 0f && jump < 1f ? MathF.Sin(jump * MathF.PI) * Math.Min(125, area.Height * 0.20f) : 0f;\n        var target = new Rectangle(area.X + (area.Width - w) / 2, area.Y + area.Height - h - 45 - (int)jumpLift, w, h);
+        // El personaje conserva siempre la misma coordenada horizontal; solo sube y baja en su propio sitio.
+        float jumpLift = jump > 0f && jump < 1f ? MathF.Sin(jump * MathF.PI) * Math.Min(125, area.Height * 0.20f) : 0f;
+        var target = new Rectangle(area.X + (area.Width - w) / 2, area.Y + area.Height - h - 45 - (int)jumpLift, w, h);
         if (clown != null) g.DrawImage(clown, target);
         else DrawClownPlaceholder(g, target, red ? Color.OrangeRed : Color.DodgerBlue);
         DrawCentered(g, red ? "JUGADOR 1" : "JUGADOR 2", new Font("Arial", 15, FontStyle.Bold), Color.White,

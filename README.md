@@ -8,6 +8,11 @@ Videojuego arcade local para dos jugadores, pensado para Windows 10 y Windows 11
 - **L**: salto del equipo azul (editable).
 - **ENTER**: iniciar una nueva ronda después del resultado.
 
+## Diseño
+La pantalla sigue la maqueta: paneles de jugador arriba (retrato, nombre, saltos), marcador central con luces, escenario de circo (rojo) y castillo (azul), trampolines con estrella y barra inferior con las teclas activas. Todo se dibuja por código y se escala a cualquier tamaño de ventana. Si no se elige imagen de personaje o escenario, se usan los dibujos por defecto.
+
+Las teclas se cambian en el menú M: haz clic en la casilla y pulsa la tecla deseada. Mantener la tecla apretada no suma saltos extra.
+
 ## Configuración
 Desde el menú M se pueden editar:
 - Duración de la partida.

@@ -9,7 +9,4 @@
     <RootNamespace>JuegoDeSaltos</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Assets\*.png" LogicalName="%(Filename)%(Extension)" />
-  </ItemGroup>
 </Project>

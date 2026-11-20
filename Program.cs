@@ -894,28 +894,30 @@ internal sealed class GameForm : Form
         float X(float x, float w) => red ? x : vw - x - w;
         Color dark = red ? Color.FromArgb(110, 10, 15) : Color.FromArgb(10, 30, 110);
 
-        var panel = new RectangleF(X(12, 598), 12, 598, 153);
-        FillRound(g, panel, 34,
+        // Panel superior más compacto para dejar libre el área de juego.
+        var panel = new RectangleF(X(12, 500), 12, 500, 112);
+        FillRound(g, panel, 24,
             red ? Color.FromArgb(240, 45, 45) : Color.FromArgb(40, 110, 235),
-            red ? Color.FromArgb(165, 15, 25) : Color.FromArgb(15, 50, 165), Color.White, 5f);
+            red ? Color.FromArgb(165, 15, 25) : Color.FromArgb(15, 50, 165), Color.White, 3f);
 
-        DrawPortrait(g, new RectangleF(X(22, 150), 20, 150, 138), red ? redClown : blueClown);
+        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96), red ? redClown : blueClown);
 
-        DrawOutlined(g, red ? "JUGADOR 1" : "JUGADOR 2", TitleFont, 50, Color.White, dark, 8f,
-            new RectangleF(X(180, 240), 28, 240, 60));
+        DrawOutlined(g, red ? "JUGADOR 1" : "JUGADOR 2", TitleFont, 32, Color.White, dark, 5f,
+            new RectangleF(X(130, 205), 20, 205, 40));
         string name = (red ? settings.Player1Name : settings.Player2Name).ToUpperInvariant();
-        float ns = FitSize(g, name, TitleFont, 36f, 232f);
-        DrawOutlined(g, name, TitleFont, ns, Color.FromArgb(255, 235, 40), dark, 6f,
-            new RectangleF(X(180, 240), 92, 240, 52));
+        float ns = FitSize(g, name, TitleFont, 25f, 198f);
+        DrawOutlined(g, name, TitleFont, ns, Color.FromArgb(255, 235, 40), dark, 3f,
+            new RectangleF(X(130, 205), 64, 205, 34));
 
-        var box = new RectangleF(X(428, 170), 18, 170, 141);
-        FillRound(g, box, 26,
+        // Contador reducido: conserva el marcador, pero ya no domina la parte superior.
+        var box = new RectangleF(X(352, 136), 20, 136, 96);
+        FillRound(g, box, 18,
             red ? Color.FromArgb(135, 18, 24) : Color.FromArgb(15, 45, 130),
             red ? Color.FromArgb(70, 6, 12) : Color.FromArgb(6, 20, 75),
-            red ? Color.FromArgb(255, 120, 120) : Color.FromArgb(110, 170, 255), 3f);
-        DrawOutlined(g, (red ? redJumps : blueJumps).ToString("00"), TitleFont, 86, Color.FromArgb(255, 235, 40),
-            Color.FromArgb(120, 70, 0), 8f, new RectangleF(box.X, 20, 170, 96));
-        DrawOutlined(g, "SALTOS", TitleFont, 32, Color.White, dark, 5f, new RectangleF(box.X, 112, 170, 44));
+            red ? Color.FromArgb(255, 120, 120) : Color.FromArgb(110, 170, 255), 2f);
+        DrawOutlined(g, (red ? redJumps : blueJumps).ToString("00"), TitleFont, 56, Color.FromArgb(255, 235, 40),
+            Color.FromArgb(120, 70, 0), 5f, new RectangleF(box.X, 20, 136, 62));
+        DrawOutlined(g, "SALTOS", TitleFont, 21, Color.White, dark, 3f, new RectangleF(box.X, 78, 136, 30));
     }
 
     private static void DrawPortrait(Graphics g, RectangleF rect, Image? img)
@@ -945,35 +947,32 @@ internal sealed class GameForm : Form
 
     private void DrawTimer(Graphics g, float vw)
     {
-        const float w = 410f;
+        const float w = 300f;
+        const float h = 104f;
         float cx = (vw - w) / 2f;
-        var outer = new RectangleF(cx, 10, w, 168);
-        if (timerArtwork != null)
-            g.DrawImage(timerArtwork, outer);
-        else
-        {
-            FillRound(g, outer, 30, Color.FromArgb(255, 220, 100), Color.FromArgb(205, 135, 20), Color.FromArgb(120, 70, 10), 3f);
-            FillRound(g, new RectangleF(cx + 16, 26, w - 32, 136), 18, Color.FromArgb(10, 10, 25), Color.Black, Color.FromArgb(70, 45, 10), 3f);
-        }
-
-        bool phase = (Environment.TickCount / 350) % 2 == 0;
-        int idx = 0;
-        for (float x = cx + 22; x <= cx + w - 22; x += 24) DrawBulb(g, x, 170, (idx++ + (phase ? 0 : 1)) % 2 == 0);
-        for (float y = 58; y <= 160; y += 24)
-        {
-            bool on = (idx++ + (phase ? 0 : 1)) % 2 == 0;
-            DrawBulb(g, cx + 8, y, on);
-            DrawBulb(g, cx + w - 8, y, on);
-        }
-
-        FillRound(g, new RectangleF(cx + 30, 12, w - 60, 62), 22, Color.FromArgb(45, 100, 215), Color.FromArgb(15, 45, 130), Color.White, 4f);
-        DrawOutlined(g, "TIEMPO RESTANTE", TitleFont, 38, Color.White, Color.FromArgb(10, 30, 100), 6f,
-            new RectangleF(cx + 30, 12, w - 60, 62));
+        var outer = new RectangleF(cx, 10, w, h);
 
         bool urgent = running && remaining <= 10 && remaining > 0;
+        bool phase = (Environment.TickCount / 350) % 2 == 0;
         Color digits = urgent && phase ? Color.FromArgb(255, 90, 60) : Color.FromArgb(255, 235, 40);
-        DrawOutlined(g, $"{remaining / 60:00}:{remaining % 60:00}", TitleFont, 92, digits, Color.FromArgb(130, 70, 0), 8f,
-            new RectangleF(cx + 16, 74, w - 32, 90));
+
+        if (timerArtwork != null)
+        {
+            // Si se proporcionó TIEMPO.png, se respeta su diseño sin dibujar encima
+            // el marco, focos ni encabezado del diseño anterior.
+            g.DrawImage(timerArtwork, outer);
+            DrawOutlined(g, $"{remaining / 60:00}:{remaining % 60:00}", TitleFont, 54,
+                digits, Color.FromArgb(90, 45, 0), 4f,
+                new RectangleF(cx + 12, 34, w - 24, 66));
+            return;
+        }
+
+        FillRound(g, outer, 22, Color.FromArgb(255, 220, 100), Color.FromArgb(205, 135, 20), Color.FromArgb(120, 70, 10), 2f);
+        FillRound(g, new RectangleF(cx + 12, 20, w - 24, 82), 14, Color.FromArgb(10, 10, 25), Color.Black, Color.FromArgb(70, 45, 10), 2f);
+        DrawOutlined(g, "TIEMPO", TitleFont, 22, Color.White, Color.FromArgb(10, 30, 100), 3f,
+            new RectangleF(cx + 20, 20, w - 40, 30));
+        DrawOutlined(g, $"{remaining / 60:00}:{remaining % 60:00}", TitleFont, 52, digits,
+            Color.FromArgb(130, 70, 0), 4f, new RectangleF(cx + 16, 48, w - 32, 52));
     }
 
     private static void DrawBulb(Graphics g, float x, float y, bool on)

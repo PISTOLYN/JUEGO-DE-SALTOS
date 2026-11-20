@@ -243,7 +243,7 @@ internal sealed class GameForm : Form
     private int redJumps, blueJumps;
     private float redJump, blueJump;
     private bool running, redDown, blueDown;
-    private Image? redClown, blueClown, redBackground, blueBackground;
+    private Image? redClown, blueClown, backgroundArtwork;
     private Image? redPadImage, bluePadImage, timerArtwork;
     private Bitmap? sceneCache;
     private Size cacheSize;
@@ -251,6 +251,7 @@ internal sealed class GameForm : Form
     public GameForm()
     {
         Text = "JUEGO DE SALTOS - 2 JUGADORES";
+        FormBorderStyle = FormBorderStyle.None;
         WindowState = FormWindowState.Maximized;
         MinimumSize = new Size(900, 540);
         BackColor = Color.Black;
@@ -277,15 +278,15 @@ internal sealed class GameForm : Form
 
     private void LoadImages()
     {
-        redClown?.Dispose(); blueClown?.Dispose(); redBackground?.Dispose(); blueBackground?.Dispose();
+        redClown?.Dispose(); blueClown?.Dispose(); backgroundArtwork?.Dispose();
         redPadImage?.Dispose(); bluePadImage?.Dispose(); timerArtwork?.Dispose();
 
         redClown = LoadImageOrDefault(GameSettings.Current.Player1Image, "JUGADOR ROJO SALTOS 1.png");
         blueClown = LoadImageOrDefault(GameSettings.Current.Player2Image, "JUGADOR AZUL 2.png");
-        // Usa el fondo FINAL.jpg que subió el usuario en ambos lados,
-        // respetando cualquier escenario personalizado configurado para cada equipo.
-        redBackground = LoadImageOrDefault(GameSettings.Current.Player1Background, "FINAL.jpg");
-        blueBackground = LoadImageOrDefault(GameSettings.Current.Player2Background, "FINAL.jpg");
+        // Un solo fondo panorámico para toda la pantalla; la línea central ya divide los equipos.
+        backgroundArtwork = LoadImage(Path.Combine(AppContext.BaseDirectory, "FINAL.jpg"))
+            ?? LoadImage(GameSettings.Current.Player1Background)
+            ?? LoadImage(GameSettings.Current.Player2Background);
         redPadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE ROJO 2.png"));
         bluePadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE AZUL 1.png"));
         timerArtwork = LoadImage(Path.Combine(AppContext.BaseDirectory, "TIEMPO RESTANTE 1.png"));
@@ -410,7 +411,7 @@ internal sealed class GameForm : Form
     {
         clock.Dispose(); animation.Dispose();
         AudioEngine.StopMusic();
-        redClown?.Dispose(); blueClown?.Dispose(); redBackground?.Dispose(); blueBackground?.Dispose();
+        redClown?.Dispose(); blueClown?.Dispose(); backgroundArtwork?.Dispose();
         redPadImage?.Dispose(); bluePadImage?.Dispose(); timerArtwork?.Dispose();
         sceneCache?.Dispose();
         base.OnFormClosed(e);
@@ -436,11 +437,12 @@ internal sealed class GameForm : Form
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.ScaleTransform(s, s);
         float half = vw / 2f;
-        DrawClown(g, true, new RectangleF(0, 0, half, vh), vh);
-        DrawClown(g, false, new RectangleF(half, 0, vw - half, vh), vh);
+        // Los paneles se dibujan detrás de los personajes para que nunca tapen sus manos al saltar.
         DrawPlayerPanel(g, vw, true);
         DrawPlayerPanel(g, vw, false);
         DrawTimer(g, vw);
+        DrawClown(g, true, new RectangleF(0, 0, half, vh), vh);
+        DrawClown(g, false, new RectangleF(half, 0, vw - half, vh), vh);
         if (!running) DrawOverlay(g, vw, vh);
         if (Sprites.Stand == null && redClown == null)
             DrawOutlined(g, "No se pudo cargar el payaso: " + Sprites.LoadError, BodyFont, 20, Color.White, Color.Black, 4f,
@@ -458,15 +460,15 @@ internal sealed class GameForm : Form
         g.Clear(Color.Black);
         g.ScaleTransform(s, s);
         float half = vw / 2f;
+        var whole = new RectangleF(0, 0, vw, vh);
         var left = new RectangleF(0, 0, half, vh);
         var right = new RectangleF(half, 0, vw - half, vh);
-        DrawScene(g, left, true, redBackground);
-        DrawScene(g, right, false, blueBackground);
+        // FINAL.jpg se pinta una sola vez, ocupando ambas mitades como una sola imagen.
+        DrawScene(g, whole, true, backgroundArtwork);
         DrawPad(g, left, vh, true, redPadImage);
         DrawPad(g, right, vh, false, bluePadImage);
-        using (var glow = new Pen(Color.FromArgb(70, 255, 210, 70), 18f)) g.DrawLine(glow, half, 0, half, vh - 92);
-        using (var line = new Pen(Color.FromArgb(255, 235, 150), 5f)) g.DrawLine(line, half, 0, half, vh - 92);
-        DrawBottomBar(g, vw, vh);
+        using (var glow = new Pen(Color.FromArgb(70, 255, 210, 70), 18f)) g.DrawLine(glow, half, 0, half, vh);
+        using (var line = new Pen(Color.FromArgb(255, 235, 150), 5f)) g.DrawLine(line, half, 0, half, vh);
     }
 
     // ----- Escenarios -----
@@ -903,7 +905,7 @@ internal sealed class GameForm : Form
             red ? Color.FromArgb(165, 15, 25) : Color.FromArgb(15, 50, 165), Color.White, 3f);
 
         // Ambos cuadros de equipo muestran el retrato del payaso, no las ilustraciones de jugador.
-        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96), null);
+        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96), red ? redClown : blueClown);
 
         DrawOutlined(g, red ? "JUGADOR 1" : "JUGADOR 2", TitleFont, 32, Color.White, dark, 5f,
             new RectangleF(X(130, 205), 20, 205, 40));

@@ -273,7 +273,7 @@ internal sealed class GameForm : Form
 
     private static void AdvanceJump(ref float j)
     {
-        if (j > 0f) { j += 0.07f; if (j >= 1f) j = 0f; }
+        if (j > 0f) { j += 0.12f; if (j >= 1f) j = 0f; }
     }
 
     private void LoadImages()
@@ -345,6 +345,14 @@ internal sealed class GameForm : Form
 
     private void HandleKey(object? sender, KeyEventArgs e)
     {
+        // ESC permite salir incluso cuando el juego está a pantalla completa y sin bordes.
+        if (e.KeyCode == Keys.Escape)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            Close();
+            return;
+        }
         if (e.KeyCode == Keys.M) { e.Handled = true; OpenSettings(); return; }
         if (!running) return;
         if (e.KeyCode == RedKey)
@@ -680,7 +688,7 @@ internal sealed class GameForm : Form
     {
         float w = rect.Width * 0.82f;
         float x = rect.X + (rect.Width - w) / 2f;
-        float top = vh - 165f;
+        float top = vh - 88f;
         if (customPad != null)
         {
             g.DrawImage(customPad, new RectangleF(x, top - 2f, w, 86f));
@@ -721,12 +729,13 @@ internal sealed class GameForm : Form
     {
         float jump = red ? redJump : blueJump;
         float lift = JumpLift(jump);
-        float padTop = vh - 165f;
+        float padTop = vh - 88f;
         float cx = rect.X + rect.Width / 2f;
-        float by = padTop + 42f - lift;
+        // Los pies aterrizan sobre el tapete; la sombra permanece en el piso.
+        float by = padTop + 82f - lift;
         float k = 1f - lift / 220f;
         using (var shadow = new SolidBrush(Color.FromArgb(85, 0, 0, 0)))
-            g.FillEllipse(shadow, cx - 120 * k, padTop + 8, 240 * k, 26);
+            g.FillEllipse(shadow, cx - 120 * k, padTop + 62f, 240 * k, 20f);
 
         var custom = red ? redClown : blueClown;
         var prevMode = g.InterpolationMode;
@@ -934,8 +943,11 @@ internal sealed class GameForm : Form
         g.SetClip(path, CombineMode.Intersect);
         if (img != null)
         {
-            float w = rect.Width * 1.15f, h = w * img.Height / img.Width;
-            g.DrawImage(img, rect.X - (w - rect.Width) / 2f, rect.Y - 2, w, h);
+            // Recorte superior centrado para que se vea la cara del payaso de cada equipo.
+            float w = rect.Width * 1.42f, h = w * img.Height / img.Width;
+            float drawX = rect.X - (w - rect.Width) / 2f;
+            float drawY = rect.Y - Math.Max(0f, h - rect.Height) * 0.12f;
+            g.DrawImage(img, drawX, drawY, w, h);
         }
         else if (Sprites.Head != null)
         {

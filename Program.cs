@@ -210,7 +210,7 @@ internal sealed class GameForm : Form
         remaining = GameSettings.Current.DurationSeconds;
         LoadImages();
         clock.Tick += (_, _) => { if (running && remaining > 0) { remaining--; Invalidate(); } if (remaining <= 0) Finish(); };
-        animation.Tick += (_, _) => { redJump = Math.Max(0, redJump - 0.055f); blueJump = Math.Max(0, blueJump - 0.055f); Invalidate(); };
+        animation.Tick += (_, _) => { redJump = redJump >= 1f ? 0f : Math.Min(1f, redJump + 0.035f); blueJump = blueJump >= 1f ? 0f : Math.Min(1f, blueJump + 0.035f); Invalidate(); };
         animation.Start();
         KeyDown += HandleKey;
         Shown += (_, _) => StartRound();
@@ -235,11 +235,11 @@ internal sealed class GameForm : Form
         if (!running) return;
         if (Enum.TryParse<Keys>(GameSettings.Current.Player1Key, true, out var redKey) && e.KeyCode == redKey)
         {
-            redJumps++; redJump = 1; AudioEngine.PlayJump(); Invalidate(); e.Handled = true;
+            redJumps++; redJump = 0.001f; AudioEngine.PlayJump(); Invalidate(); e.Handled = true;
         }
         if (Enum.TryParse<Keys>(GameSettings.Current.Player2Key, true, out var blueKey) && e.KeyCode == blueKey)
         {
-            blueJumps++; blueJump = 1; AudioEngine.PlayJump(); Invalidate(); e.Handled = true;
+            blueJumps++; blueJump = 0.001f; AudioEngine.PlayJump(); Invalidate(); e.Handled = true;
         }
     }
 
@@ -333,7 +333,7 @@ internal sealed class GameForm : Form
             new Rectangle(area.X, 145, area.Width, 65));
         int h = (int)(area.Height * 0.57);
         int w = (int)(h * 0.48);
-        var target = new Rectangle(area.X + (area.Width - w) / 2, area.Y + area.Height - h - 45 - (int)(jump * 75), w, h);
+        // El personaje conserva siempre la misma coordenada horizontal; solo sube y baja en su propio sitio.\n        float jumpLift = jump > 0f && jump < 1f ? MathF.Sin(jump * MathF.PI) * Math.Min(125, area.Height * 0.20f) : 0f;\n        var target = new Rectangle(area.X + (area.Width - w) / 2, area.Y + area.Height - h - 45 - (int)jumpLift, w, h);
         if (clown != null) g.DrawImage(clown, target);
         else DrawClownPlaceholder(g, target, red ? Color.OrangeRed : Color.DodgerBlue);
         DrawCentered(g, red ? "JUGADOR 1" : "JUGADOR 2", new Font("Arial", 15, FontStyle.Bold), Color.White,

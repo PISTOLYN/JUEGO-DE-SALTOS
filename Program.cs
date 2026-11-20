@@ -12,8 +12,35 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         GameSettings.Load();
+        Sprites.Load();
         AudioEngine.PrepareDefaults();
         Application.Run(new GameForm());
+    }
+}
+
+internal static class Sprites
+{
+    public static Bitmap? Stand, Crouch, Air, Up, Head;
+
+    public static void Load()
+    {
+        Stand = Read("payaso_parado.png");
+        Crouch = Read("payaso_agachado.png");
+        Air = Read("payaso_salto.png");
+        Up = Read("payaso_brazos_arriba.png");
+        Head = Read("payaso_cabeza.png");
+    }
+
+    private static Bitmap? Read(string name)
+    {
+        try
+        {
+            using var stream = typeof(Sprites).Assembly.GetManifestResourceStream(name);
+            if (stream == null) return null;
+            using var img = Image.FromStream(stream);
+            return new Bitmap(img);
+        }
+        catch { return null; }
     }
 }
 
@@ -45,6 +72,7 @@ internal sealed class GameSettings
         {
             if (File.Exists(FilePath))
                 Current = JsonSerializer.Deserialize<GameSettings>(File.ReadAllText(FilePath)) ?? new();
+            if (Current.Player1Key == "Z" && Current.Player2Key == "X") { Current.Player1Key = "A"; Current.Player2Key = "L"; }
         }
         catch { Current = new(); }
     }
@@ -230,7 +258,7 @@ internal sealed class GameForm : Form
 
     private static void AdvanceJump(ref float j)
     {
-        if (j > 0f) { j += 0.035f; if (j >= 1f) j = 0f; }
+        if (j > 0f) { j += 0.04f; if (j >= 1f) j = 0f; }
     }
 
     private void LoadImages()
@@ -294,12 +322,12 @@ internal sealed class GameForm : Form
         if (e.KeyCode == RedKey)
         {
             e.Handled = true;
-            if (!redDown) { redDown = true; redJumps++; redJump = 0.001f; AudioEngine.PlayJump(); }
+            if (!redDown) { redDown = true; redJumps++; redJump = redJump > 0f ? 0.14f : 0.001f; AudioEngine.PlayJump(); }
         }
         if (e.KeyCode == BlueKey)
         {
             e.Handled = true;
-            if (!blueDown) { blueDown = true; blueJumps++; blueJump = 0.001f; AudioEngine.PlayJump(); }
+            if (!blueDown) { blueDown = true; blueJumps++; blueJump = blueJump > 0f ? 0.14f : 0.001f; AudioEngine.PlayJump(); }
         }
     }
 
@@ -635,27 +663,52 @@ internal sealed class GameForm : Form
     }
 
     // ----- Personajes -----
+    // Fases del salto (0..1): 0-0.12 se agacha, 0.12-0.50 sube, 0.50-0.88 baja con los brazos arriba, 0.88-1 aterriza agachado.
+    private static float JumpLift(float phase)
+    {
+        if (phase <= 0f || phase >= 1f) return 0f;
+        float t = (phase - 0.12f) / 0.76f;
+        return t <= 0f || t >= 1f ? 0f : MathF.Sin(t * MathF.PI) * 110f;
+    }
+
+    private static Bitmap? SpriteFrame(float phase)
+    {
+        if (phase <= 0f || phase >= 1f) return Sprites.Stand;
+        if (phase < 0.12f || phase >= 0.88f) return Sprites.Crouch;
+        return phase < 0.50f ? Sprites.Air : Sprites.Up;
+    }
+
     private void DrawClown(Graphics g, bool red, RectangleF rect, float vh)
     {
         float jump = red ? redJump : blueJump;
-        float lift = jump > 0f && jump < 1f ? MathF.Sin(jump * MathF.PI) * 125f : 0f;
+        float lift = JumpLift(jump);
         float padTop = vh - 165f;
         float cx = rect.X + rect.Width / 2f;
         float by = padTop + 16f - lift;
-        float k = 1f - lift / 260f;
+        float k = 1f - lift / 220f;
         using (var shadow = new SolidBrush(Color.FromArgb(85, 0, 0, 0)))
             g.FillEllipse(shadow, cx - 120 * k, padTop + 8, 240 * k, 26);
 
-        var img = red ? redClown : blueClown;
-        const float H = 500f;
-        if (img != null)
+        var custom = red ? redClown : blueClown;
+        var prevMode = g.InterpolationMode;
+        g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+        if (custom != null)
         {
-            float w = H * img.Width / img.Height, h = H;
+            const float H = 500f;
+            float w = H * custom.Width / custom.Height, h = H;
             float maxW = rect.Width * 0.9f;
             if (w > maxW) { h = h * maxW / w; w = maxW; }
-            g.DrawImage(img, cx - w / 2f, by - h, w, h);
+            g.DrawImage(custom, cx - w / 2f, by - h, w, h);
         }
-        else DrawClownBody(g, cx, by, H, lift > 8f);
+        else if (Sprites.Stand != null)
+        {
+            var spr = SpriteFrame(jump) ?? Sprites.Stand;
+            const float scale = 470f / 1100f; // el sprite "parado" mide 1100 px y se dibuja a 470 unidades
+            float w = spr.Width * scale, h = spr.Height * scale;
+            g.DrawImage(spr, cx - w / 2f, by - h, w, h);
+        }
+        else DrawClownBody(g, cx, by, 500f, lift > 8f);
+        g.InterpolationMode = prevMode;
     }
 
     private static void DrawX(Graphics g, Pen pen, float cx, float cy, float size)
@@ -839,6 +892,13 @@ internal sealed class GameForm : Form
             float w = rect.Width * 1.15f, h = w * img.Height / img.Width;
             g.DrawImage(img, rect.X - (w - rect.Width) / 2f, rect.Y - 2, w, h);
         }
+        else if (Sprites.Head != null)
+        {
+            var head = Sprites.Head;
+            float sc = Math.Max(rect.Width / head.Width, rect.Height / head.Height);
+            float w = head.Width * sc, h = head.Height * sc;
+            g.DrawImage(head, rect.X + (rect.Width - w) / 2f, rect.Y + (rect.Height - h) / 2f + rect.Height * 0.04f, w, h);
+        }
         else DrawClownHead(g, rect.X + rect.Width / 2f, rect.Y + rect.Height * 0.52f, rect.Width * 0.30f);
         g.Restore(state);
         using var border = new Pen(Color.FromArgb(255, 205, 70), 4f) { LineJoin = LineJoin.Round };
@@ -1010,7 +1070,9 @@ internal sealed class GameForm : Form
     {
         if (!family.IsStyleAvailable(style)) style = FontStyle.Regular;
         using var path = new GraphicsPath();
+        // OJO: GenericTypographic incluye LineLimit y no dibuja nada si la línea es más alta que la caja.
         using var fmt = new StringFormat(StringFormat.GenericTypographic) { Alignment = h, LineAlignment = v };
+        fmt.FormatFlags = StringFormatFlags.NoClip;
         path.AddString(text, family, (int)style, size, bounds, fmt);
         using var pen = new Pen(outline, outlineWidth) { LineJoin = LineJoin.Round };
         using var brush = new SolidBrush(fill);

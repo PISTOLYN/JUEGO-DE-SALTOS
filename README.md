@@ -9,7 +9,7 @@ Videojuego arcade local para dos jugadores, pensado para Windows 10 y Windows 11
 - **ENTER**: iniciar una nueva ronda después del resultado.
 
 ## Diseño
-La pantalla sigue la maqueta: paneles de jugador arriba (retrato, nombre, saltos), marcador central con luces, escenario de circo (rojo) y castillo (azul), trampolines con estrella y barra inferior con las teclas activas. Todo se dibuja por código y se escala a cualquier tamaño de ventana. Si no se elige imagen de personaje o escenario, se usan los dibujos por defecto.
+La pantalla sigue la maqueta: paneles de jugador arriba (retrato, nombre, saltos), marcador central con luces, escenario de circo (rojo) y castillo (azul), trampolines con estrella y barra inferior con las teclas activas. Todo se dibuja por código y se escala a cualquier tamaño de ventana. El personaje por defecto es el payaso de `Assets/` (parado, agachado, salto y brazos arriba), incrustado en el EXE; la animación del salto cambia entre esas cuatro poses. Si se elige una imagen propia en el menú M, se usa esa en lugar del payaso.
 
 Las teclas se cambian en el menú M: haz clic en la casilla y pulsa la tecla deseada. Mantener la tecla apretada no suma saltos extra.
 

@@ -274,7 +274,7 @@ internal sealed class GameForm : Form
         fullscreenButton.Location = new Point(Math.Max(0, ClientSize.Width - 46), 8);
         var fullscreenTip = new ToolTip();
         fullscreenTip.SetToolTip(fullscreenButton, "Cambiar pantalla completa / ventana");
-        fullscreenButton.Click += (_, _) => ToggleFullScreen();
+        fullscreenButton.Click += (_, _) => { ToggleFullScreen(); ActiveControl = null; Focus(); };
         Controls.Add(fullscreenButton);
         fullscreenButton.BringToFront();
         MinimumSize = new Size(900, 540);
@@ -394,8 +394,21 @@ internal sealed class GameForm : Form
         else EnterFullScreen();
     }
 
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+        // Al restaurar la ventana, recupera el foco para que ENTER siempre inicie la partida.
+        ActiveControl = null;
+        Focus();
+    }
+
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        if ((keyData & Keys.KeyCode) == Keys.Enter && !running && !countdownActive)
+        {
+            BeginCountdown();
+            return true;
+        }
         if ((keyData & Keys.KeyCode) == Keys.Escape)
         {
             if (FormBorderStyle == FormBorderStyle.None) ExitFullScreen();
@@ -1014,7 +1027,8 @@ internal sealed class GameForm : Form
             red ? Color.FromArgb(165, 15, 25) : Color.FromArgb(15, 50, 165), Color.White, 3f);
 
         // Ambos cuadros de equipo muestran el retrato del payaso, no las ilustraciones de jugador.
-        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96), red ? redClown : blueClown);
+        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96),
+            (red ? redClown : blueClown) ?? Sprites.Stand ?? Sprites.Head);
 
         DrawOutlined(g, red ? "JUGADOR 1" : "JUGADOR 2", TitleFont, 32, Color.White, dark, 5f,
             new RectangleF(X(130, 205), 20, 205, 40));
@@ -1043,18 +1057,12 @@ internal sealed class GameForm : Form
         g.SetClip(path, CombineMode.Intersect);
         if (img != null)
         {
-            // Recorte superior centrado para que se vea la cara del payaso de cada equipo.
-            float w = rect.Width * 1.42f, h = w * img.Height / img.Width;
-            float drawX = rect.X - (w - rect.Width) / 2f;
-            float drawY = rect.Y - Math.Max(0f, h - rect.Height) * 0.12f;
-            g.DrawImage(img, drawX, drawY, w, h);
-        }
-        else if (Sprites.Head != null)
-        {
-            var head = Sprites.Head;
-            float sc = Math.Max(rect.Width / head.Width, rect.Height / head.Height);
-            float w = head.Width * sc, h = head.Height * sc;
-            g.DrawImage(head, rect.X + (rect.Width - w) / 2f, rect.Y + (rect.Height - h) / 2f + rect.Height * 0.04f, w, h);
+            // Mostrar el retrato completo dentro del cuadro, sin recortar ni ocultar al payaso.
+            float scale = Math.Min(rect.Width / img.Width, rect.Height / img.Height);
+            float w = img.Width * scale, h = img.Height * scale;
+            float x = rect.X + (rect.Width - w) / 2f;
+            float y = rect.Y + (rect.Height - h) / 2f;
+            g.DrawImage(img, x, y, w, h);
         }
         else DrawClownHead(g, rect.X + rect.Width / 2f, rect.Y + rect.Height * 0.52f, rect.Width * 0.30f);
         g.Restore(state);

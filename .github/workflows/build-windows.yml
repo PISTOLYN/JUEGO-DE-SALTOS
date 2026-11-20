@@ -22,10 +22,10 @@ jobs:
 
     steps:
       - name: Descargar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Instalar .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
@@ -33,7 +33,7 @@ jobs:
         run: dotnet publish JUEGO-DE-SALTOS.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/${{ matrix.architecture }}
 
       - name: Subir versión ${{ matrix.architecture }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: JuegoDeSaltos-Windows-${{ matrix.architecture }}
           path: artifacts/${{ matrix.architecture }}/

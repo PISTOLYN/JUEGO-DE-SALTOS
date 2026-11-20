@@ -436,7 +436,7 @@ internal sealed class GameForm : Form
             return;
         }
         if (e.KeyCode == Keys.M) { e.Handled = true; OpenSettings(); return; }
-        if (e.KeyCode == Keys.Enter && !running && !countdownActive && !hasStarted)
+        if (e.KeyCode == Keys.Enter && !running && !countdownActive)
         {
             e.Handled = true;
             BeginCountdown();

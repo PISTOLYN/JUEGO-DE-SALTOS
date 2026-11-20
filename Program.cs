@@ -272,7 +272,7 @@ internal sealed class GameForm : Form
 
     private static void AdvanceJump(ref float j)
     {
-        if (j > 0f) { j += 0.04f; if (j >= 1f) j = 0f; }
+        if (j > 0f) { j += 0.07f; if (j >= 1f) j = 0f; }
     }
 
     private void LoadImages()

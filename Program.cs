@@ -239,6 +239,9 @@ internal sealed class GameForm : Form
 
     private readonly System.Windows.Forms.Timer clock = new() { Interval = 1000 };
     private readonly System.Windows.Forms.Timer animation = new() { Interval = 16 };
+    private readonly System.Windows.Forms.Timer countdownClock = new() { Interval = 1000 };
+    private int countdownValue;
+    private bool countdownActive, hasStarted;
     private int remaining;
     private int redJumps, blueJumps;
     private float redJump, blueJump;
@@ -270,8 +273,8 @@ internal sealed class GameForm : Form
         fullscreenButton.FlatAppearance.BorderSize = 1;
         fullscreenButton.Location = new Point(Math.Max(0, ClientSize.Width - 46), 8);
         var fullscreenTip = new ToolTip();
-        fullscreenTip.SetToolTip(fullscreenButton, "Salir de pantalla completa");
-        fullscreenButton.Click += (_, _) => ExitFullScreen();
+        fullscreenTip.SetToolTip(fullscreenButton, "Cambiar pantalla completa / ventana");
+        fullscreenButton.Click += (_, _) => ToggleFullScreen();
         Controls.Add(fullscreenButton);
         fullscreenButton.BringToFront();
         MinimumSize = new Size(900, 540);
@@ -282,9 +285,20 @@ internal sealed class GameForm : Form
         LoadImages();
         clock.Tick += (_, _) => { if (running && remaining > 0) { remaining--; Invalidate(); } if (remaining <= 0) Finish(); };
         animation.Tick += (_, _) => { AdvanceJump(ref redJump); AdvanceJump(ref blueJump); Invalidate(); };
+        countdownClock.Tick += (_, _) =>
+        {
+            if (countdownValue > 0)
+            {
+                countdownValue--;
+                Invalidate();
+                return;
+            }
+            countdownClock.Stop();
+            countdownActive = false;
+            StartRound();
+        };
         animation.Start();
         KeyDown += HandleKey;
-        Shown += (_, _) => StartRound();
     }
 
     private static FontFamily LoadFamily(string name)
@@ -355,9 +369,29 @@ internal sealed class GameForm : Form
                         Math.Min(720, Screen.PrimaryScreen?.WorkingArea.Height ?? 720));
         StartPosition = FormStartPosition.CenterScreen;
         CenterToScreen();
-        fullscreenButton.Visible = false;
+        fullscreenButton.Visible = true;
+        var tip = new ToolTip();
+        tip.SetToolTip(fullscreenButton, "Activar pantalla completa");
         InvalidateScene();
         Invalidate();
+    }
+
+    private void EnterFullScreen()
+    {
+        WindowState = FormWindowState.Normal;
+        FormBorderStyle = FormBorderStyle.None;
+        WindowState = FormWindowState.Maximized;
+        fullscreenButton.Visible = true;
+        var tip = new ToolTip();
+        tip.SetToolTip(fullscreenButton, "Salir de pantalla completa");
+        InvalidateScene();
+        Invalidate();
+    }
+
+    private void ToggleFullScreen()
+    {
+        if (FormBorderStyle == FormBorderStyle.None) ExitFullScreen();
+        else EnterFullScreen();
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -402,6 +436,12 @@ internal sealed class GameForm : Form
             return;
         }
         if (e.KeyCode == Keys.M) { e.Handled = true; OpenSettings(); return; }
+        if (e.KeyCode == Keys.Enter && !running && !countdownActive && !hasStarted)
+        {
+            e.Handled = true;
+            BeginCountdown();
+            return;
+        }
         if (!running) return;
         if (e.KeyCode == RedKey)
         {
@@ -420,12 +460,24 @@ internal sealed class GameForm : Form
         base.OnKeyUp(e);
         if (e.KeyCode == RedKey) redDown = false;
         if (e.KeyCode == BlueKey) blueDown = false;
-        if (e.KeyCode == Keys.Enter && !running) StartRound();
     }
 
     // ---------- Lógica de la partida ----------
+    private void BeginCountdown()
+    {
+        countdownValue = 3;
+        countdownActive = true;
+        redDown = blueDown = false;
+        countdownClock.Stop();
+        countdownClock.Start();
+        Invalidate();
+    }
+
     private void StartRound()
     {
+        hasStarted = true;
+        countdownActive = false;
+        countdownClock.Stop();
         redJumps = blueJumps = 0;
         redJump = blueJump = 0f;
         redDown = blueDown = false;
@@ -465,7 +517,7 @@ internal sealed class GameForm : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
-        clock.Dispose(); animation.Dispose();
+        clock.Dispose(); animation.Dispose(); countdownClock.Dispose();
         AudioEngine.StopMusic();
         redClown?.Dispose(); blueClown?.Dispose(); backgroundArtwork?.Dispose();
         redPadImage?.Dispose(); bluePadImage?.Dispose(); timerArtwork?.Dispose();
@@ -1125,25 +1177,40 @@ internal sealed class GameForm : Form
         }
     }
 
-    // ----- Resultado -----
+    // ----- Inicio, cuenta regresiva y resultado -----
     private void DrawOverlay(Graphics g, float vw, float vh)
     {
         using (var shade = new SolidBrush(Color.FromArgb(175, 0, 0, 0))) g.FillRectangle(shade, 0, 0, vw, vh);
         var panel = new RectangleF(vw / 2f - 460, vh / 2f - 170, 920, 340);
         FillRound(g, panel, 40, Color.FromArgb(75, 25, 130), Color.FromArgb(28, 10, 65), Color.FromArgb(255, 205, 70), 6f);
 
+        if (countdownActive)
+        {
+            string countdownText = countdownValue > 0 ? countdownValue.ToString() : "¡INICIAMOS!";
+            float size = countdownValue > 0 ? 190f : 105f;
+            DrawOutlined(g, countdownText, TitleFont, FitSize(g, countdownText, TitleFont, size, 860f),
+                Color.FromArgb(255, 235, 40), Color.FromArgb(110, 35, 0), 10f,
+                new RectangleF(panel.X + 20, panel.Y + 35, panel.Width - 40, 205));
+            DrawOutlined(g, "¡PREPÁRENSE PARA SALTAR!", BodyFont, 30, Color.White, Color.FromArgb(40, 15, 80), 4f,
+                new RectangleF(panel.X, panel.Bottom - 80, panel.Width, 50), StringAlignment.Center, StringAlignment.Center, FontStyle.Bold);
+            return;
+        }
+
         var s = GameSettings.Current;
-        bool finished = remaining <= 0;
-        string title = !finished ? "PRESIONA M PARA CONFIGURAR"
+        bool finished = hasStarted && remaining <= 0;
+        string title = !hasStarted ? "PRESIONA ENTER PARA COMENZAR"
+            : !finished ? "PRESIONA M PARA CONFIGURAR"
             : redJumps == blueJumps ? "¡EMPATE!"
             : $"¡GANA {(redJumps > blueJumps ? s.Player1Name : s.Player2Name).ToUpperInvariant()}!";
-        float ts = FitSize(g, title, TitleFont, 84f, 860f);
+        float ts = FitSize(g, title, TitleFont, !hasStarted ? 72f : 84f, 860f);
         DrawOutlined(g, title, TitleFont, ts, Color.FromArgb(255, 215, 40), Color.FromArgb(110, 60, 0), 8f,
             new RectangleF(panel.X, panel.Y + 30, panel.Width, 130));
         if (finished)
             DrawOutlined(g, $"{redJumps:00}  -  {blueJumps:00}", TitleFont, 64, Color.White, Color.FromArgb(40, 15, 80), 7f,
                 new RectangleF(panel.X, panel.Y + 160, panel.Width, 90));
-        DrawOutlined(g, "ENTER = NUEVA PARTIDA     |     M = CONFIGURACIÓN", BodyFont, 26, Color.White, Color.FromArgb(40, 15, 80), 4f,
+        string hint = !hasStarted ? "PRESIONA ENTER Y PREPÁRATE"
+            : "ENTER = NUEVA PARTIDA     |     M = CONFIGURACIÓN";
+        DrawOutlined(g, hint, BodyFont, 26, Color.White, Color.FromArgb(40, 15, 80), 4f,
             new RectangleF(panel.X, panel.Bottom - 70, panel.Width, 50), StringAlignment.Center, StringAlignment.Center, FontStyle.Bold);
     }
 

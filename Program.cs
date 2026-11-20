@@ -719,7 +719,7 @@ internal sealed class GameForm : Form
         float lift = JumpLift(jump);
         float padTop = vh - 165f;
         float cx = rect.X + rect.Width / 2f;
-        float by = padTop + 16f - lift;
+        float by = padTop + 42f - lift;
         float k = 1f - lift / 220f;
         using (var shadow = new SolidBrush(Color.FromArgb(85, 0, 0, 0)))
             g.FillEllipse(shadow, cx - 120 * k, padTop + 8, 240 * k, 26);

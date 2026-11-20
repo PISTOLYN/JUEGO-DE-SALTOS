@@ -282,8 +282,10 @@ internal sealed class GameForm : Form
 
         redClown = LoadImageOrDefault(GameSettings.Current.Player1Image, "JUGADOR ROJO SALTOS 1.png");
         blueClown = LoadImageOrDefault(GameSettings.Current.Player2Image, "JUGADOR AZUL 2.png");
-        redBackground = LoadImage(GameSettings.Current.Player1Background);
-        blueBackground = LoadImage(GameSettings.Current.Player2Background);
+        // Usa el fondo FINAL.jpg que subió el usuario en ambos lados,
+        // respetando cualquier escenario personalizado configurado para cada equipo.
+        redBackground = LoadImageOrDefault(GameSettings.Current.Player1Background, "FINAL.jpg");
+        blueBackground = LoadImageOrDefault(GameSettings.Current.Player2Background, "FINAL.jpg");
         redPadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE ROJO 2.png"));
         bluePadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE AZUL 1.png"));
         timerArtwork = LoadImage(Path.Combine(AppContext.BaseDirectory, "TIEMPO RESTANTE 1.png"));
@@ -900,7 +902,8 @@ internal sealed class GameForm : Form
             red ? Color.FromArgb(240, 45, 45) : Color.FromArgb(40, 110, 235),
             red ? Color.FromArgb(165, 15, 25) : Color.FromArgb(15, 50, 165), Color.White, 3f);
 
-        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96), red ? redClown : blueClown);
+        // Ambos cuadros de equipo muestran el retrato del payaso, no las ilustraciones de jugador.
+        DrawPortrait(g, new RectangleF(X(20, 96), 19, 96, 96), null);
 
         DrawOutlined(g, red ? "JUGADOR 1" : "JUGADOR 2", TitleFont, 32, Color.White, dark, 5f,
             new RectangleF(X(130, 205), 20, 205, 40));

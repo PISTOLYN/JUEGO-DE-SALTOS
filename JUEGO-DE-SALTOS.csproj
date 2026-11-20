@@ -9,4 +9,8 @@
     <RootNamespace>JuegoDeSaltos</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <ItemGroup>
+    <None Update="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="*.png;*.jpg;*.jpeg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

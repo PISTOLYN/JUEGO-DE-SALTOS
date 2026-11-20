@@ -324,12 +324,12 @@ internal sealed class GameForm : Form
         if (e.KeyCode == RedKey)
         {
             e.Handled = true;
-            if (!redDown) { redDown = true; redJumps++; redJump = redJump > 0f ? 0.14f : 0.001f; AudioEngine.PlayJump(); }
+            if (!redDown) { redDown = true; if (redJump <= 0f) { redJumps++; redJump = 0.001f; AudioEngine.PlayJump(); } }
         }
         if (e.KeyCode == BlueKey)
         {
             e.Handled = true;
-            if (!blueDown) { blueDown = true; blueJumps++; blueJump = blueJump > 0f ? 0.14f : 0.001f; AudioEngine.PlayJump(); }
+            if (!blueDown) { blueDown = true; if (blueJump <= 0f) { blueJumps++; blueJump = 0.001f; AudioEngine.PlayJump(); } }
         }
     }
 

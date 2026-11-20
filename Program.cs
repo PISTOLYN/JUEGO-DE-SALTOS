@@ -247,12 +247,33 @@ internal sealed class GameForm : Form
     private Image? redPadImage, bluePadImage, timerArtwork;
     private Bitmap? sceneCache;
     private Size cacheSize;
+    private readonly Button fullscreenButton = new()
+    {
+        Text = "⤢",
+        Size = new Size(38, 32),
+        FlatStyle = FlatStyle.Flat,
+        BackColor = Color.FromArgb(220, 25, 30, 45),
+        ForeColor = Color.White,
+        Font = new Font("Arial", 16, FontStyle.Bold),
+        Cursor = Cursors.Hand,
+        TabStop = false,
+        Anchor = AnchorStyles.Top | AnchorStyles.Right,
+        Visible = true
+    };
 
     public GameForm()
     {
         Text = "JUEGO DE SALTOS - 2 JUGADORES";
         FormBorderStyle = FormBorderStyle.None;
         WindowState = FormWindowState.Maximized;
+        fullscreenButton.FlatAppearance.BorderColor = Color.White;
+        fullscreenButton.FlatAppearance.BorderSize = 1;
+        fullscreenButton.Location = new Point(Math.Max(0, ClientSize.Width - 46), 8);
+        var fullscreenTip = new ToolTip();
+        fullscreenTip.SetToolTip(fullscreenButton, "Salir de pantalla completa");
+        fullscreenButton.Click += (_, _) => ExitFullScreen();
+        Controls.Add(fullscreenButton);
+        fullscreenButton.BringToFront();
         MinimumSize = new Size(900, 540);
         BackColor = Color.Black;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
@@ -273,7 +294,7 @@ internal sealed class GameForm : Form
 
     private static void AdvanceJump(ref float j)
     {
-        if (j > 0f) { j += 0.12f; if (j >= 1f) j = 0f; }
+        if (j > 0f) { j += 0.16f; if (j >= 1f) j = 0f; }
     }
 
     private void LoadImages()
@@ -319,8 +340,35 @@ internal sealed class GameForm : Form
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
+        if (fullscreenButton != null)
+            fullscreenButton.Location = new Point(Math.Max(0, ClientSize.Width - fullscreenButton.Width - 8), 8);
         InvalidateScene();
         Invalidate();
+    }
+
+    private void ExitFullScreen()
+    {
+        if (FormBorderStyle != FormBorderStyle.None) return;
+        WindowState = FormWindowState.Normal;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        Size = new Size(Math.Min(1100, Screen.PrimaryScreen?.WorkingArea.Width ?? 1100),
+                        Math.Min(720, Screen.PrimaryScreen?.WorkingArea.Height ?? 720));
+        StartPosition = FormStartPosition.CenterScreen;
+        CenterToScreen();
+        fullscreenButton.Visible = false;
+        InvalidateScene();
+        Invalidate();
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if ((keyData & Keys.KeyCode) == Keys.Escape)
+        {
+            if (FormBorderStyle == FormBorderStyle.None) ExitFullScreen();
+            else Close();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     // ---------- Teclas ----------

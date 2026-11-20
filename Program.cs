@@ -22,8 +22,8 @@ internal sealed class GameSettings
     public int DurationSeconds { get; set; } = 60;
     public string Player1Name { get; set; } = "EQUIPO ROJO";
     public string Player2Name { get; set; } = "EQUIPO AZUL";
-    public string Player1Key { get; set; } = "A";
-    public string Player2Key { get; set; } = "L";
+    public string Player1Key { get; set; } = "Z";
+    public string Player2Key { get; set; } = "X";
     public string Player1Image { get; set; } = "";
     public string Player2Image { get; set; } = "";
     public string Player1Background { get; set; } = "";
@@ -210,7 +210,7 @@ internal sealed class GameForm : Form
         remaining = GameSettings.Current.DurationSeconds;
         LoadImages();
         clock.Tick += (_, _) => { if (running && remaining > 0) { remaining--; Invalidate(); } if (remaining <= 0) Finish(); };
-        animation.Tick += (_, _) => { redJump = redJump >= 1f ? 0f : Math.Min(1f, redJump + 0.035f); blueJump = blueJump >= 1f ? 0f : Math.Min(1f, blueJump + 0.035f); Invalidate(); };
+        animation.Tick += (_, _) => { if (redJump > 0f) { redJump += 0.035f; if (redJump >= 1f) redJump = 0f; } if (blueJump > 0f) { blueJump += 0.035f; if (blueJump >= 1f) blueJump = 0f; } Invalidate(); };
         animation.Start();
         KeyDown += HandleKey;
         Shown += (_, _) => StartRound();
@@ -463,8 +463,8 @@ internal sealed class SettingsForm : Form
         s.DurationSeconds = (int)duration.Value;
         s.Player1Name = string.IsNullOrWhiteSpace(redName.Text) ? "EQUIPO ROJO" : redName.Text.Trim();
         s.Player2Name = string.IsNullOrWhiteSpace(blueName.Text) ? "EQUIPO AZUL" : blueName.Text.Trim();
-        s.Player1Key = NormalizeKey(redKey.Text, "A");
-        s.Player2Key = NormalizeKey(blueKey.Text, "L");
+        s.Player1Key = NormalizeKey(redKey.Text, "Z");
+        s.Player2Key = NormalizeKey(blueKey.Text, "X");
         s.Player1Image = redImage.Text; s.Player2Image = blueImage.Text;
         s.Player1Background = redBg.Text; s.Player2Background = blueBg.Text;
         s.MusicFile = music.Text; s.JumpSoundFile = effect.Text;

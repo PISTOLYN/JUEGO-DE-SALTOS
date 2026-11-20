@@ -286,7 +286,7 @@ internal sealed class GameForm : Form
         blueBackground = LoadImage(GameSettings.Current.Player2Background);
         redPadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE ROJO 2.png"));
         bluePadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE AZUL 1.png"));
-        timerArtwork = LoadImage(Path.Combine(AppContext.BaseDirectory, "TIEMPO.png"));
+        timerArtwork = LoadImage(Path.Combine(AppContext.BaseDirectory, "TIEMPO RESTANTE 1.png"));
         InvalidateScene();
     }
 
@@ -958,7 +958,7 @@ internal sealed class GameForm : Form
 
         if (timerArtwork != null)
         {
-            // Si se proporcionó TIEMPO.png, se respeta su diseño sin dibujar encima
+            // Si se proporcionó TIEMPO RESTANTE 1.png, se respeta su diseño sin dibujar encima
             // el marco, focos ni encabezado del diseño anterior.
             g.DrawImage(timerArtwork, outer);
             DrawOutlined(g, $"{remaining / 60:00}:{remaining % 60:00}", TitleFont, 54,

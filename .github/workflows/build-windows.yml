@@ -1,0 +1,40 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: x86
+            runtime: win-x86
+          - architecture: x64
+            runtime: win-x64
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Compilar EXE independiente
+        run: dotnet publish JUEGO-DE-SALTOS.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/${{ matrix.architecture }}
+
+      - name: Subir versión ${{ matrix.architecture }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: JuegoDeSaltos-Windows-${{ matrix.architecture }}
+          path: artifacts/${{ matrix.architecture }}/
+          if-no-files-found: error

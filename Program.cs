@@ -23,15 +23,26 @@ internal static class Sprites
     public static Bitmap? Stand, Crouch, Air, Up, Head;
     public static string LoadError = "";
 
-    // Los sprites van incrustados en el propio código (SpriteData, al final de este archivo):
-    // no dependen de carpetas ni archivos externos.
+    // Prioriza las poses PNG incluidas en Assets; conserva los sprites incrustados como respaldo.
     public static void Load()
     {
-        Stand = Decode(SpriteData.Stand);
-        Crouch = Decode(SpriteData.Crouch);
-        Air = Decode(SpriteData.Air);
-        Up = Decode(SpriteData.Up);
-        Head = Decode(SpriteData.Head);
+        Stand = LoadExternal("payaso_parado.png") ?? Decode(SpriteData.Stand);
+        Crouch = LoadExternal("payaso_agachado.png") ?? Decode(SpriteData.Crouch);
+        Air = LoadExternal("payaso_salto.png") ?? Decode(SpriteData.Air);
+        Up = LoadExternal("payaso_brazos_arriba.png") ?? Decode(SpriteData.Up);
+        Head = LoadExternal("payaso_cabeza.png") ?? Decode(SpriteData.Head);
+    }
+
+    private static Bitmap? LoadExternal(string fileName)
+    {
+        try
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
+            if (!File.Exists(path)) return null;
+            using var img = Image.FromFile(path);
+            return new Bitmap(img);
+        }
+        catch (Exception ex) { LoadError = ex.Message; return null; }
     }
 
     private static Bitmap? Decode(string base64)
@@ -233,6 +244,7 @@ internal sealed class GameForm : Form
     private float redJump, blueJump;
     private bool running, redDown, blueDown;
     private Image? redClown, blueClown, redBackground, blueBackground;
+    private Image? redPadImage, bluePadImage, timerArtwork;
     private Bitmap? sceneCache;
     private Size cacheSize;
 
@@ -266,11 +278,22 @@ internal sealed class GameForm : Form
     private void LoadImages()
     {
         redClown?.Dispose(); blueClown?.Dispose(); redBackground?.Dispose(); blueBackground?.Dispose();
-        redClown = LoadImage(GameSettings.Current.Player1Image);
-        blueClown = LoadImage(GameSettings.Current.Player2Image);
+        redPadImage?.Dispose(); bluePadImage?.Dispose(); timerArtwork?.Dispose();
+
+        redClown = LoadImageOrDefault(GameSettings.Current.Player1Image, "JUGADOR ROJO SALTOS 1.png");
+        blueClown = LoadImageOrDefault(GameSettings.Current.Player2Image, "JUGADOR AZUL 2.png");
         redBackground = LoadImage(GameSettings.Current.Player1Background);
         blueBackground = LoadImage(GameSettings.Current.Player2Background);
+        redPadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE ROJO 2.png"));
+        bluePadImage = LoadImage(Path.Combine(AppContext.BaseDirectory, "TAPETE AZUL 1.png"));
+        timerArtwork = LoadImage(Path.Combine(AppContext.BaseDirectory, "TIEMPO.png"));
         InvalidateScene();
+    }
+
+    private static Image? LoadImageOrDefault(string configuredPath, string defaultFile)
+    {
+        var selected = LoadImage(configuredPath);
+        return selected ?? LoadImage(Path.Combine(AppContext.BaseDirectory, defaultFile));
     }
 
     private static Image? LoadImage(string path)
@@ -386,6 +409,7 @@ internal sealed class GameForm : Form
         clock.Dispose(); animation.Dispose();
         AudioEngine.StopMusic();
         redClown?.Dispose(); blueClown?.Dispose(); redBackground?.Dispose(); blueBackground?.Dispose();
+        redPadImage?.Dispose(); bluePadImage?.Dispose(); timerArtwork?.Dispose();
         sceneCache?.Dispose();
         base.OnFormClosed(e);
     }
@@ -436,8 +460,8 @@ internal sealed class GameForm : Form
         var right = new RectangleF(half, 0, vw - half, vh);
         DrawScene(g, left, true, redBackground);
         DrawScene(g, right, false, blueBackground);
-        DrawPad(g, left, vh, true);
-        DrawPad(g, right, vh, false);
+        DrawPad(g, left, vh, true, redPadImage);
+        DrawPad(g, right, vh, false, bluePadImage);
         using (var glow = new Pen(Color.FromArgb(70, 255, 210, 70), 18f)) g.DrawLine(glow, half, 0, half, vh - 92);
         using (var line = new Pen(Color.FromArgb(255, 235, 150), 5f)) g.DrawLine(line, half, 0, half, vh - 92);
         DrawBottomBar(g, vw, vh);
@@ -648,11 +672,17 @@ internal sealed class GameForm : Form
         return pts;
     }
 
-    private static void DrawPad(Graphics g, RectangleF rect, float vh, bool red)
+    private static void DrawPad(Graphics g, RectangleF rect, float vh, bool red, Image? customPad)
     {
         float w = rect.Width * 0.82f;
         float x = rect.X + (rect.Width - w) / 2f;
         float top = vh - 165f;
+        if (customPad != null)
+        {
+            g.DrawImage(customPad, new RectangleF(x, top - 2f, w, 86f));
+            return;
+        }
+
         Color topC = red ? Color.FromArgb(235, 55, 60) : Color.FromArgb(45, 110, 235);
         Color frontC = red ? Color.FromArgb(160, 20, 30) : Color.FromArgb(20, 55, 165);
         using (var shadow = new SolidBrush(Color.FromArgb(70, 0, 0, 0)))
@@ -697,20 +727,23 @@ internal sealed class GameForm : Form
         var custom = red ? redClown : blueClown;
         var prevMode = g.InterpolationMode;
         g.InterpolationMode = InterpolationMode.HighQualityBilinear;
-        if (custom != null)
+
+        // Los PNG de poses son los que animan al personaje durante el salto.
+        // Las imágenes completas de cada jugador quedan para sus retratos del panel.
+        var spr = SpriteFrame(jump);
+        if (spr != null)
+        {
+            const float scale = 470f / 800f;
+            float w = spr.Width * scale, h = spr.Height * scale;
+            g.DrawImage(spr, cx - w / 2f, by - h, w, h);
+        }
+        else if (custom != null)
         {
             const float H = 500f;
             float w = H * custom.Width / custom.Height, h = H;
             float maxW = rect.Width * 0.9f;
             if (w > maxW) { h = h * maxW / w; w = maxW; }
             g.DrawImage(custom, cx - w / 2f, by - h, w, h);
-        }
-        else if (Sprites.Stand != null)
-        {
-            var spr = SpriteFrame(jump) ?? Sprites.Stand;
-            const float scale = 470f / 800f; // el sprite "parado" mide 800 px y se dibuja a 470 unidades
-            float w = spr.Width * scale, h = spr.Height * scale;
-            g.DrawImage(spr, cx - w / 2f, by - h, w, h);
         }
         else DrawClownBody(g, cx, by, 500f, lift > 8f);
         g.InterpolationMode = prevMode;
@@ -915,8 +948,13 @@ internal sealed class GameForm : Form
         const float w = 410f;
         float cx = (vw - w) / 2f;
         var outer = new RectangleF(cx, 10, w, 168);
-        FillRound(g, outer, 30, Color.FromArgb(255, 220, 100), Color.FromArgb(205, 135, 20), Color.FromArgb(120, 70, 10), 3f);
-        FillRound(g, new RectangleF(cx + 16, 26, w - 32, 136), 18, Color.FromArgb(10, 10, 25), Color.Black, Color.FromArgb(70, 45, 10), 3f);
+        if (timerArtwork != null)
+            g.DrawImage(timerArtwork, outer);
+        else
+        {
+            FillRound(g, outer, 30, Color.FromArgb(255, 220, 100), Color.FromArgb(205, 135, 20), Color.FromArgb(120, 70, 10), 3f);
+            FillRound(g, new RectangleF(cx + 16, 26, w - 32, 136), 18, Color.FromArgb(10, 10, 25), Color.Black, Color.FromArgb(70, 45, 10), 3f);
+        }
 
         bool phase = (Environment.TickCount / 350) % 2 == 0;
         int idx = 0;
